@@ -58,6 +58,10 @@ Known cosmetic changes handled
       form <-> distributed ``A + B/r + C/r²`` form.
    d. Whitespace inside ``\\frac{...}`` arguments.
    e. Outer ``\\left(…\\right)`` wrapper before a basis blade.
+   f. Spherical curl: the former notebook-wide ``trigsimp(method='old')``
+      profile wrote the radial coefficient as one fraction and kept a minus
+      sign outside the polar coefficient.  Scoped routing restores the
+      standard ``simplify`` factored/sign-distributed forms.
 
    **Known remaining differences (require symbolic algebra to verify):**
 
@@ -114,6 +118,55 @@ def _norm_sum_sqrt_to_power32(text: str) -> str:
     )
     replacement = r'\1^{2} \\sqrt{\1^{2} + \2^{2}} + \2^{2} \\sqrt{\1^{2} + \2^{2}}'
     return re.sub(pattern, replacement, text)
+
+
+def _norm_spherical_curl(text: str) -> str:
+    r"""Normalize the two known forms of the spherical-curl coefficients.
+
+    The spherical coordinates in this notebook are real, so
+    ``sin(theta)**2 == Abs(sin(theta))**2``.  Together with
+    ``sin(theta)*cos(theta)*tan(theta) == sin(theta)**2``, that converts the
+    old single fraction into the factored form below.  The exact replacement
+    deliberately does not accept nearby expressions: an unverified change
+    must still fail validation.
+    """
+    old_radial = (
+        r'\frac{A^{\phi }  {\sin{\left (\theta  \right )}}^{2} + '
+        r'A^{\phi }  \sin{\left (\theta  \right )} '
+        r'\cos{\left (\theta  \right )} \tan{\left (\theta  \right )} + '
+        r'{\sin{\left (\theta  \right )}}^{2} '
+        r'\tan{\left (\theta  \right )} \partial_{\theta } A^{\phi }  - '
+        r'\tan{\left (\theta  \right )} \partial_{\phi } A^{\theta } }'
+        r'{\tan{\left (\theta  \right )} '
+        r'\left|{\sin{\left (\theta  \right )}}\right|} '
+        r'\boldsymbol{e}_{r}'
+    )
+    factored_radial = (
+        r'\left(\frac{2 A^{\phi } }{\tan{\left (\theta  \right )}} + '
+        r'\partial_{\theta } A^{\phi }  - '
+        r'\frac{\partial_{\phi } A^{\theta } }'
+        r'{{\sin{\left (\theta  \right )}}^{2}}\right) '
+        r'\left|{\sin{\left (\theta  \right )}}\right| '
+        r'\boldsymbol{e}_{r}'
+    )
+    old_polar = (
+        r'- \frac{r^{2} {\sin{\left (\theta  \right )}}^{2} '
+        r'\partial_{r} A^{\phi }  + 2 r A^{\phi }  '
+        r'{\sin{\left (\theta  \right )}}^{2} - '
+        r'\partial_{\phi } A^{r} }'
+        r'{r^{2} \left|{\sin{\left (\theta  \right )}}\right|} '
+        r'\boldsymbol{e}_{\theta }'
+    )
+    sign_distributed_polar = (
+        r'+ \frac{- r^{2} {\sin{\left (\theta  \right )}}^{2} '
+        r'\partial_{r} A^{\phi }  - 2 r A^{\phi }  '
+        r'{\sin{\left (\theta  \right )}}^{2} + '
+        r'\partial_{\phi } A^{r} }'
+        r'{r^{2} \left|{\sin{\left (\theta  \right )}}\right|} '
+        r'\boldsymbol{e}_{\theta }'
+    )
+    text = text.replace(old_radial, factored_radial)
+    return text.replace(old_polar, sign_distributed_polar)
 
 
 # ---------------------------------------------------------------------------
@@ -292,6 +345,7 @@ LATEX_NORMALIZERS = [
     # for some curvilinear-coordinate expressions. The normalizers below
     # bring both forms to a common representation so the validator can
     # confirm the changes are cosmetic.
+    _norm_spherical_curl,           # factored/sign-distributed spherical-curl coefficients
     _norm_sin2_sinh2_identity,      # sin²+sinh²  ↔  -cos²+cosh²  (prolate spheroidal)
     _norm_sum_sqrt_to_power32,      # (X²+Y²)^{3/2}  ↔  X²√(…)+Y²√(…)  (paraboloidal)
     _norm_distribute_r2_denominator,  # \frac{r²A+rB+C}{r²}  ↔  A+B/r+C/r²  (spherical)
