@@ -14,6 +14,7 @@ from sympy import (
 
 from . import printer
 from ._utils import cached_property as _cached_property
+from ._utils.simplify import simplify_compat
 from .atoms import (
     BasisVectorSymbol, DotProductSymbol, MatrixFunction, Determinant,
 )
@@ -299,7 +300,7 @@ def symbols_list(s, indices=None, sub=True, commutative=False):
 
 
 class Simp:
-    modes = [simplify]
+    modes = [simplify_compat]
 
     @staticmethod
     def profile(s):

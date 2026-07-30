@@ -15,11 +15,12 @@ Changelog
   time out after 600 s on SymPy ≥ 1.13.  SymPy PR #26390 added an O(N·M)
   ``.replace()`` traversal inside ``TR3``/``futrig`` that is a no-op for
   galgebra's symbolic trig arguments but dominated each of the ~70
-  ``Simp.apply`` calls during ``Ga.build(norm=True)`` for curvilinear
-  coordinates.  The fix uses ``trigsimp(method='old')`` via ``Simp.profile``
-  for the affected example, cutting run time from > 600 s to < 6 s.
-  A notebook note documents the two cosmetic output differences from the
-  pre-1.13 form; a proper upstream fix is tracked in :issue:`576`.
+  ``Simp.apply`` calls for large curvilinear-coordinate expressions.
+  ``Simp`` now detects expressions likely to trigger that traversal and uses
+  ``trigsimp(method='old')`` for those expressions while retaining
+  ``simplify`` for smaller expressions.  Explicit ``Simp.profile`` settings
+  continue to replace the default simplifier.  This library-level fallback
+  also removes the need for an example-wide profile override.
 
 - :support:`589` Added Step 0 to the release-process runbook
   (``doc/dev/release-process.md``): open a release issue before preparing the

@@ -49,7 +49,7 @@ Known cosmetic changes handled
    DeprecationWarnings from mpmath are environment-specific and ignored.
    Only ``display_data`` and ``execute_result`` outputs are compared.
 
-5. SymPy 1.13 ``trigsimp(method='old')`` algebraic form differences
+5. SymPy 1.13 compatibility-fallback algebraic form differences
    (curvilinear coordinates example, ``examples/ipython/LaTeX.ipynb``):
 
    a. Pythagorean identity: ``sin²(η)+sinh²(ξ)`` <-> ``-cos²(η)+cosh²(ξ)``
@@ -60,11 +60,6 @@ Known cosmetic changes handled
    e. Outer ``\\left(…\\right)`` wrapper before a basis blade.
 
    **Known remaining differences (require symbolic algebra to verify):**
-
-   * Spherical curl ``e_r`` component: SymPy writes a parenthesised
-     ``(A/tan + B - C/sin²)|sin|`` form; trigsimp produces a single
-     fraction over ``tan|sin|``.  Both are mathematically equal but have
-     fundamentally different structure.
 
    * Prolate-spheroidal divergence: SymPy collects all terms into one
      large fraction; trigsimp distributes into seven separate fractions.
@@ -293,10 +288,10 @@ def _norm_collapse_spaces(text: str) -> str:
 LATEX_NORMALIZERS = [
     _norm_array_colspec,
     _norm_cdot,
-    # SymPy 1.13 (trigsimp method='old') uses different algebraic forms for
-    # some curvilinear-coordinate expressions.  The normalizers below bring
-    # both forms to a common representation so the validator can confirm the
-    # changes are cosmetic.
+    # The SymPy 1.13 compatibility fallback uses different algebraic forms
+    # for some curvilinear-coordinate expressions. The normalizers below
+    # bring both forms to a common representation so the validator can
+    # confirm the changes are cosmetic.
     _norm_sin2_sinh2_identity,      # sin²+sinh²  ↔  -cos²+cosh²  (prolate spheroidal)
     _norm_sum_sqrt_to_power32,      # (X²+Y²)^{3/2}  ↔  X²√(…)+Y²√(…)  (paraboloidal)
     _norm_distribute_r2_denominator,  # \frac{r²A+rB+C}{r²}  ↔  A+B/r+C/r²  (spherical)
