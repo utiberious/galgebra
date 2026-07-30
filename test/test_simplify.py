@@ -8,7 +8,7 @@ from galgebra.ga import Ga
 from galgebra.metric import Simp
 
 
-x, y = symbols('x y')
+x, y, u, v = symbols('x y u v')
 
 
 def _paired_trig_expression(count, extra=0):
@@ -18,12 +18,8 @@ def _paired_trig_expression(count, extra=0):
     return Add(*terms, evaluate=False)
 
 
-def _mixed_nested_expression(count):
-    terms = [
-        sin(x + i) + cos(x + i) + sinh(y + i) + cosh(y + i)
-        for i in range(count)
-    ]
-    return Add(*terms, evaluate=False)/sqrt(sin(x)**2 + sinh(y)**2)
+def _mixed_nested_expression():
+    return 1/sqrt(sin(x)**2 + sinh(y)**2)
 
 
 def test_major_minor():
@@ -33,12 +29,14 @@ def test_major_minor():
 
 
 def test_boundary_routes_only_at_or_above_limit():
-    below = _mixed_nested_expression(7)
-    above = _mixed_nested_expression(8)
+    below = sqrt(sin(x) + sinh(y))
+    above = _mixed_nested_expression()
 
     with mock.patch.object(
         simplify_module, '_SYMPY_MAJOR_MINOR', (1, 13)
     ):
+        assert simplify_module._fu_candidate_cost(below.base) == 10
+        assert simplify_module._fu_candidate_cost(above.base) == 18
         assert not simplify_module._has_expensive_fu_traversal(below)
         assert simplify_module._has_expensive_fu_traversal(above)
 
@@ -46,6 +44,26 @@ def test_boundary_routes_only_at_or_above_limit():
 def test_shallow_trig_sum_uses_real_general_simplifier():
     rational = (y**2 - 1)/(y - 1)
     expr = _paired_trig_expression(16, rational)
+
+    result = simplify_module.simplify_for_display(expr)
+
+    assert not result.has(rational)
+    assert simplify(result - expr) == 0
+
+
+def test_small_mixed_radical_cannot_borrow_unrelated_expression_cost():
+    rational = (y**2 - 1)/(y - 1)
+    expr = Add(
+        *[sin(x + i) + cos(x + i) for i in range(16)],
+        rational,
+        sqrt(sin(u) + sinh(v)),
+        evaluate=False,
+    )
+
+    with mock.patch.object(
+        simplify_module, '_SYMPY_MAJOR_MINOR', (1, 13)
+    ):
+        assert not simplify_module._has_expensive_fu_traversal(expr)
 
     result = simplify_module.simplify_for_display(expr)
 
@@ -81,7 +99,7 @@ def test_algebra_keeps_general_simplification():
 
 def test_display_route_can_preserve_unrelated_algebraic_form():
     rational = (y**2 - 1)/(y - 1)
-    expr = _mixed_nested_expression(8) + rational
+    expr = _mixed_nested_expression() + rational
 
     with (
         mock.patch.object(
