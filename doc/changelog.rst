@@ -13,13 +13,18 @@ Changelog
 - :bug:`590` Worked around a performance regression in SymPy 1.13 that
   caused ``examples/ipython/LaTeX.ipynb`` (``check('curvi_linear_latex')``) to
   time out after 600 s on SymPy ≥ 1.13.  SymPy PR #26390 added an O(N·M)
-  ``.replace()`` traversal inside ``TR3``/``futrig`` that is a no-op for
-  galgebra's symbolic trig arguments but dominated each of the ~70
-  ``Simp.apply`` calls during ``Ga.build(norm=True)`` for curvilinear
-  coordinates.  The fix uses ``trigsimp(method='old')`` via ``Simp.profile``
-  for the affected example, cutting run time from > 600 s to < 6 s.
+  ``.replace()`` traversal inside ``TR3``/``futrig`` that made simplification
+  of the prolate-spheroidal output stall during display.  The fix uses
+  ``trigsimp(method='old')`` via ``Simp.profile`` for the affected example,
+  cutting its run time from > 600 s to < 6 s.
   A notebook note documents the two cosmetic output differences from the
-  pre-1.13 form; a proper upstream fix is tracked in :issue:`576`.
+  pre-1.13 form.
+
+- :bug:`598` Multivector string and LaTeX display now avoid the same SymPy
+  regression outside that example.  Large expressions with trigonometric and
+  hyperbolic functions under non-integral powers use the bounded
+  ``trigsimp(method='old')`` path.  Algebraic simplification and explicit
+  ``Simp.profile`` modes remain unchanged.
 
 - :support:`589` Added Step 0 to the release-process runbook
   (``doc/dev/release-process.md``): open a release issue before preparing the

@@ -19,10 +19,10 @@ def _major_minor(version):
 _SYMPY_MAJOR_MINOR = _major_minor(sympy.__version__)
 
 # SymPy 1.13's gh-26390 added a nested replace traversal to the FU
-# simplifier. Its cost is proportional to the expression tree size times the
-# number of trig and hyperbolic nodes.
+# simplifier. The observed slow expression combines trigonometric and
+# hyperbolic functions under non-integral powers; its cost is proportional to
+# the expression tree size times the number of those function nodes.
 _FU_TRAVERSAL_COST_LIMIT = 4096
-_TRIG_FUNCTIONS = (TrigonometricFunction, HyperbolicFunction)
 
 
 def _has_expensive_fu_traversal(expr):
@@ -30,13 +30,31 @@ def _has_expensive_fu_traversal(expr):
     if _SYMPY_MAJOR_MINOR < (1, 13):
         return False
 
-    trig_nodes = 0
-    for node_count, node in enumerate(preorder_traversal(expr), 1):
-        if isinstance(node, _TRIG_FUNCTIONS):
-            trig_nodes += 1
-        if node_count * trig_nodes >= _FU_TRAVERSAL_COST_LIMIT:
-            return True
-    return False
+    nodes = list(preorder_traversal(expr))
+    trig_nodes = sum(
+        isinstance(node, TrigonometricFunction) for node in nodes
+    )
+    hyperbolic_nodes = sum(
+        isinstance(node, HyperbolicFunction) for node in nodes
+    )
+    traversal_cost = len(nodes) * (trig_nodes + hyperbolic_nodes)
+    if (
+        trig_nodes == 0
+        or hyperbolic_nodes == 0
+        or traversal_cost < _FU_TRAVERSAL_COST_LIMIT
+    ):
+        return False
+
+    return any(
+        (
+            node.is_Pow
+            and node.exp.is_integer is False
+            and node.base.is_Add
+            and node.base.has(TrigonometricFunction)
+            and node.base.has(HyperbolicFunction)
+        )
+        for node in nodes
+    )
 
 
 def simplify_for_display(expr):

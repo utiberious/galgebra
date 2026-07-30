@@ -300,8 +300,9 @@ def symbols_list(s, indices=None, sub=True, commutative=False):
 
 
 class Simp:
-    _default_modes = [simplify]
-    modes = _default_modes
+    _default_modes = (simplify,)
+    modes = list(_default_modes)
+    _default_modes_instance = modes
 
     @staticmethod
     def profile(s):
@@ -319,7 +320,10 @@ class Simp:
         """Apply the display fallback unless the user selected a profile."""
         modes = (
             [simplify_for_display]
-            if Simp.modes == Simp._default_modes
+            if (
+                Simp.modes is Simp._default_modes_instance
+                and tuple(Simp.modes) == Simp._default_modes
+            )
             else Simp.modes
         )
         obj = S.Zero

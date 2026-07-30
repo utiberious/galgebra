@@ -189,7 +189,7 @@ def main():
     from sympy import trigsimp
     from galgebra.metric import Simp
 
-    orig_modes = Simp.modes[:]
+    orig_modes = Simp.modes
     Simp.profile([lambda e: trigsimp(e, method='old')])
     try:
         derivatives_in_spherical_coordinates()
