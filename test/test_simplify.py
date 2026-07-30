@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from sympy import Add, cos, cosh, simplify, sin, sinh, sqrt, symbols
+from sympy import Add, Rational, cos, cosh, simplify, sin, sinh, sqrt, symbols
 
 from galgebra._utils import simplify as simplify_module
 from galgebra.ga import Ga
@@ -9,6 +9,7 @@ from galgebra.metric import Simp
 
 
 x, y, u, v = symbols('x y u v')
+z = symbols('z:4')
 
 
 def _paired_trig_expression(count, extra=0):
@@ -28,17 +29,17 @@ def test_major_minor():
     assert simplify_module._major_minor('unknown') == (0, 0)
 
 
-def test_boundary_routes_only_at_or_above_limit():
-    below = sqrt(sin(x) + sinh(y))
-    above = _mixed_nested_expression()
+def test_routes_only_observed_mixed_squared_shape():
+    plain = sqrt(sin(x) + sinh(y))
+    observed = _mixed_nested_expression()
+    other_power = (sin(x)**2 + sinh(y)**2)**Rational(1, 3)
 
     with mock.patch.object(
         simplify_module, '_SYMPY_MAJOR_MINOR', (1, 13)
     ):
-        assert simplify_module._fu_candidate_cost(below.base) == 10
-        assert simplify_module._fu_candidate_cost(above.base) == 18
-        assert not simplify_module._has_expensive_fu_traversal(below)
-        assert simplify_module._has_expensive_fu_traversal(above)
+        assert not simplify_module._has_expensive_fu_traversal(plain)
+        assert not simplify_module._has_expensive_fu_traversal(other_power)
+        assert simplify_module._has_expensive_fu_traversal(observed)
 
 
 def test_shallow_trig_sum_uses_real_general_simplifier():
@@ -57,6 +58,26 @@ def test_small_mixed_radical_cannot_borrow_unrelated_expression_cost():
         *[sin(x + i) + cos(x + i) for i in range(16)],
         rational,
         sqrt(sin(u) + sinh(v)),
+        evaluate=False,
+    )
+
+    with mock.patch.object(
+        simplify_module, '_SYMPY_MAJOR_MINOR', (1, 13)
+    ):
+        assert not simplify_module._has_expensive_fu_traversal(expr)
+
+    result = simplify_module.simplify_for_display(expr)
+
+    assert not result.has(rational)
+    assert simplify(result - expr) == 0
+
+
+def test_large_benign_mixed_radical_uses_general_simplifier():
+    rational = (y**2 - 1)/(y - 1)
+    expr = Add(
+        *[sin(x + i) + cos(x + i) for i in range(16)],
+        rational,
+        sqrt(sin(u) + sinh(v) + sum(z)),
         evaluate=False,
     )
 

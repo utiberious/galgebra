@@ -19,21 +19,33 @@ def _major_minor(version):
 _SYMPY_MAJOR_MINOR = _major_minor(sympy.__version__)
 
 # SymPy 1.13's gh-26390 added a nested replace traversal to the FU
-# simplifier. The observed slow expression contains a sufficiently complex
-# additive base of trigonometric and hyperbolic functions under a
-# non-integral power. Score each such base independently so unrelated terms
-# elsewhere in the expression cannot make a small radical look expensive.
-_FU_TRAVERSAL_COST_LIMIT = 18
+# simplifier. Match only the observed two-term prolate radical shape. A
+# numerical tree-cost heuristic admitted benign expressions whose unrelated
+# terms happened to produce the same score.
 
 
-def _fu_candidate_cost(base):
-    """Estimate nested traversal work within one candidate power base."""
-    nodes = list(preorder_traversal(base))
-    function_nodes = sum(
-        isinstance(node, (TrigonometricFunction, HyperbolicFunction))
-        for node in nodes
+def _is_squared_function(term, function_type):
+    return (
+        term.is_Pow
+        and term.exp == 2
+        and isinstance(term.base, function_type)
     )
-    return len(nodes) * function_nodes
+
+
+def _is_mixed_squared_base(base):
+    """Whether ``base`` is one trig square plus one hyperbolic square."""
+    if not base.is_Add or len(base.args) != 2:
+        return False
+    return (
+        any(
+            _is_squared_function(term, TrigonometricFunction)
+            for term in base.args
+        )
+        and any(
+            _is_squared_function(term, HyperbolicFunction)
+            for term in base.args
+        )
+    )
 
 
 def _has_expensive_fu_traversal(expr):
@@ -44,11 +56,8 @@ def _has_expensive_fu_traversal(expr):
     return any(
         (
             node.is_Pow
-            and node.exp.is_integer is False
-            and node.base.is_Add
-            and node.base.has(TrigonometricFunction)
-            and node.base.has(HyperbolicFunction)
-            and _fu_candidate_cost(node.base) >= _FU_TRAVERSAL_COST_LIMIT
+            and abs(node.exp) == sympy.S.Half
+            and _is_mixed_squared_base(node.base)
         )
         for node in preorder_traversal(expr)
     )
