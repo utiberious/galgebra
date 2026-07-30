@@ -14,6 +14,7 @@ from sympy import (
 
 from . import printer
 from ._utils import cached_property as _cached_property
+from ._utils.simplify import simplify_for_display
 from .atoms import (
     BasisVectorSymbol, DotProductSymbol, MatrixFunction, Determinant,
 )
@@ -299,7 +300,8 @@ def symbols_list(s, indices=None, sub=True, commutative=False):
 
 
 class Simp:
-    modes = [simplify]
+    _default_modes = [simplify]
+    modes = _default_modes
 
     @staticmethod
     def profile(s):
@@ -310,6 +312,19 @@ class Simp:
         obj = S.Zero
         for coef, base in linear_expand_terms(expr):
             obj += apply_function_list(Simp.modes, coef) * base
+        return obj
+
+    @staticmethod
+    def apply_display(expr):
+        """Apply the display fallback unless the user selected a profile."""
+        modes = (
+            [simplify_for_display]
+            if Simp.modes == Simp._default_modes
+            else Simp.modes
+        )
+        obj = S.Zero
+        for coef, base in linear_expand_terms(expr):
+            obj += apply_function_list(modes, coef) * base
         return obj
 
     @staticmethod

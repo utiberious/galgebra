@@ -612,7 +612,7 @@ class Mv(printer.GaPrintable):
 
         # note: this just replaces `self` for the rest of this function
         obj = expand(self.obj)
-        obj = metric.Simp.apply(obj)
+        obj = metric.Simp.apply_display(obj)
         self = Mv(obj, ga=self.Ga)
 
         if self.i_grade == 0:
@@ -697,7 +697,7 @@ class Mv(printer.GaPrintable):
         # note: this just replaces `self` for the rest of this function
         obj = expand(self.obj)
         try:
-            obj = metric.Simp.apply(obj)
+            obj = metric.Simp.apply_display(obj)
         except ZeroDivisionError:
             pass  # SymPy trigsimp regression; display without simplification
         self = Mv(obj, ga=self.Ga)
